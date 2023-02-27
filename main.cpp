@@ -6,35 +6,35 @@ int main(int argc, char** argv)
 {
     const int buf_size = 1024 * 1024 * 30;
     char* buf = new char[buf_size];
-    //char * buf = (char *)malloc(buf_size);	//.cÇëÓÃÕâ¾ä
+    //char * buf = (char *)malloc(buf_size);	//.cè¯·ç”¨è¿™å¥
 
     char exePath[255];
     GetModuleFileName(NULL, exePath, 255);
-    strrchr(exePath, '\\')[1] = 0; // 0ÊÇ×Ö·û´®µÄ½áÎ²
+    strrchr(exePath, '\\')[1] = 0; // 0æ˜¯å­—ç¬¦ä¸²çš„ç»“å°¾
 
     char pcmFilePath[255];
     sprintf(pcmFilePath, "%s%s", exePath, "taqing.pcm");
 
-    FILE* thbgm; //ÎÄ¼ş
+    FILE* thbgm; //æ–‡ä»¶
     fopen_s(&thbgm, pcmFilePath, "rb");
-    /*	thbgm	=	fopen("pcm16k.pcm","rb");	//µ¼Èëffmpeg×ª»»³öÀ´µÄpcm£¬Î´ÕÒµ½fopen_sËùÔÚµÄ¿â£¬ÇëÊ¹ÓÃÕâ¾ä
+    /*	thbgm	=	fopen("pcm16k.pcm","rb");	//å¯¼å…¥ffmpegè½¬æ¢å‡ºæ¥çš„pcmï¼Œæœªæ‰¾åˆ°fopen_sæ‰€åœ¨çš„åº“ï¼Œè¯·ä½¿ç”¨è¿™å¥
     if(NULL == thbgm)	return -1;
     */
-    fread(buf, sizeof(char), buf_size, thbgm); //Ô¤¶ÁÈ¡ÎÄ¼ş
+    fread(buf, sizeof(char), buf_size, thbgm); //é¢„è¯»å–æ–‡ä»¶
     fclose(thbgm);
 
     WAVEFORMATEX wfx = { 0 };
-    wfx.wFormatTag = WAVE_FORMAT_PCM; //ÉèÖÃ²¨ĞÎÉùÒôµÄ¸ñÊ½
-    wfx.nChannels = 2;            //ÉèÖÃÒôÆµÎÄ¼şµÄÍ¨µÀÊıÁ¿
-    wfx.nSamplesPerSec = 44100; //ÉèÖÃÃ¿¸öÉùµÀ²¥·ÅºÍ¼ÇÂ¼Ê±µÄÑù±¾ÆµÂÊ
-    wfx.wBitsPerSample = 16;    //Ã¿¸ô²ÉÑùµãËùÕ¼µÄ´óĞ¡
+    wfx.wFormatTag = WAVE_FORMAT_PCM; //è®¾ç½®æ³¢å½¢å£°éŸ³çš„æ ¼å¼
+    wfx.nChannels = 2;            //è®¾ç½®éŸ³é¢‘æ–‡ä»¶çš„é€šé“æ•°é‡
+    wfx.nSamplesPerSec = 44100; //è®¾ç½®æ¯ä¸ªå£°é“æ’­æ”¾å’Œè®°å½•æ—¶çš„æ ·æœ¬é¢‘ç‡
+    wfx.wBitsPerSample = 16;    //æ¯éš”é‡‡æ ·ç‚¹æ‰€å çš„å¤§å°
 
     wfx.nBlockAlign = wfx.nChannels * wfx.wBitsPerSample / 8;
     wfx.nAvgBytesPerSec = wfx.nBlockAlign * wfx.nSamplesPerSec;
 
     HANDLE wait = CreateEvent(NULL, 0, 0, NULL);
     HWAVEOUT hwo;
-    waveOutOpen(&hwo, WAVE_MAPPER, &wfx, (DWORD_PTR)wait, 0L, CALLBACK_EVENT); //´ò¿ªÒ»¸ö¸ø¶¨µÄ²¨ĞÎÒôÆµÊä³ö×°ÖÃÀ´½øĞĞ»Ø·Å
+    waveOutOpen(&hwo, WAVE_MAPPER, &wfx, (DWORD_PTR)wait, 0L, CALLBACK_EVENT); //æ‰“å¼€ä¸€ä¸ªç»™å®šçš„æ³¢å½¢éŸ³é¢‘è¾“å‡ºè£…ç½®æ¥è¿›è¡Œå›æ”¾
 
     int data_size = 20480;
     char* data_ptr = buf;
@@ -42,7 +42,7 @@ int main(int argc, char** argv)
 
     while (data_ptr - buf < buf_size)
     {
-        //ÕâÒ»²¿·ÖĞèÒªÌØ±ğ×¢ÒâµÄÊÇÔÚÑ­»·»ØÀ´Ö®ºó²»ÄÜ»¨Ì«³¤µÄÊ±¼äÈ¥×ö¶ÁÈ¡Êı¾İÖ®ÀàµÄ¹¤×÷£¬²»È»ÔÚÃ¿¸öÑ­»·µÄ¼äÏ¶»áÓĞ¡°ßÕßÕ¡±µÄÔëÒô
+        //è¿™ä¸€éƒ¨åˆ†éœ€è¦ç‰¹åˆ«æ³¨æ„çš„æ˜¯åœ¨å¾ªç¯å›æ¥ä¹‹åä¸èƒ½èŠ±å¤ªé•¿çš„æ—¶é—´å»åšè¯»å–æ•°æ®ä¹‹ç±»çš„å·¥ä½œï¼Œä¸ç„¶åœ¨æ¯ä¸ªå¾ªç¯çš„é—´éš™ä¼šæœ‰â€œå“’å“’â€çš„å™ªéŸ³
         wh.lpData = data_ptr;
         wh.dwBufferLength = data_size;
         wh.dwFlags = 0L;
@@ -50,10 +50,10 @@ int main(int argc, char** argv)
 
         data_ptr += data_size;
 
-        waveOutPrepareHeader(hwo, &wh, sizeof(WAVEHDR)); //×¼±¸Ò»¸ö²¨ĞÎÊı¾İ¿éÓÃÓÚ²¥·Å
-        waveOutWrite(hwo, &wh, sizeof(WAVEHDR)); //ÔÚÒôÆµÃ½ÌåÖĞ²¥·ÅµÚ¶ş¸öº¯ÊıwhÖ¸¶¨µÄÊı¾İ
+        waveOutPrepareHeader(hwo, &wh, sizeof(WAVEHDR)); //å‡†å¤‡ä¸€ä¸ªæ³¢å½¢æ•°æ®å—ç”¨äºæ’­æ”¾
+        waveOutWrite(hwo, &wh, sizeof(WAVEHDR)); //åœ¨éŸ³é¢‘åª’ä½“ä¸­æ’­æ”¾ç¬¬äºŒä¸ªå‡½æ•°whæŒ‡å®šçš„æ•°æ®
 
-        WaitForSingleObject(wait, INFINITE); //µÈ´ı
+        WaitForSingleObject(wait, INFINITE); //ç­‰å¾…
     }
     waveOutClose(hwo);
     CloseHandle(wait);
