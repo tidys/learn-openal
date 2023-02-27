@@ -3,7 +3,7 @@
 #pragma comment(lib, "winmm.lib")
 #include "AL/al.h"
 #include "AL/alc.h"
-//#include "AL/alut.h"
+#include "AL/alut.h"
 #include <math.h>
 
 ALuint Source;// 用于播放声音
@@ -128,7 +128,7 @@ int main(int argc, char** argv)
     testOpenAl();
     char mp3File[255];
     FILE* soundFile = fopen(mp3File, "rb");
-    //alutCreateBufferFromFile(mp3File);
+    alutCreateBufferFromFile(mp3File);
 
 
     return 0;
