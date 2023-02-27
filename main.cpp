@@ -6,7 +6,6 @@ int main(int argc, char** argv)
 {
     const int buf_size = 1024 * 1024 * 30;
     char* buf = new char[buf_size];
-    //char * buf = (char *)malloc(buf_size);	//.c请用这句
 
     char exePath[255];
     GetModuleFileName(NULL, exePath, 255);
@@ -17,9 +16,6 @@ int main(int argc, char** argv)
 
     FILE* thbgm; //文件
     fopen_s(&thbgm, pcmFilePath, "rb");
-    /*	thbgm	=	fopen("pcm16k.pcm","rb");	//导入ffmpeg转换出来的pcm，未找到fopen_s所在的库，请使用这句
-    if(NULL == thbgm)	return -1;
-    */
     fread(buf, sizeof(char), buf_size, thbgm); //预读取文件
     fclose(thbgm);
 
