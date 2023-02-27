@@ -1,8 +1,76 @@
 #include <Windows.h>
 #include <stdio.h>
 #pragma comment(lib, "winmm.lib")
+#include "AL/al.h"
+#include "AL/alc.h"
+//#include "AL/alut.h"
+#include <math.h>
 
-int main(int argc, char** argv)
+ALuint Source;// 用于播放声音
+ALuint Buffer;// 声音数据
+
+
+ 
+
+//载入数据
+bool LoadData()
+{
+    // 使用一段正弦波作数据
+    short data[800];
+    alGenBuffers(1, &Buffer);
+    float max = SHRT_MAX / 4;
+    float rad = 0;
+    for (short& e : data)
+    {
+        e = (short)(max * cosf(rad));
+        rad += 1.f;
+    }
+    // 载入WAV数据
+    alBufferData(Buffer, AL_FORMAT_MONO16, data, 800, 8000);
+    alGenSources(1, &Source);
+
+    // 源声音的位置
+    ALfloat SourcePos[] = { 0.0, 0.0, 0.0 };
+    // 源声音的速度
+    ALfloat SourceVel[] = { 0.0, 0.0, 0.0 };
+
+    alSourcei(Source, AL_BUFFER, Buffer);
+    alSourcef(Source, AL_PITCH, 1.0f);
+    alSourcef(Source, AL_GAIN, 1.0f);
+    alSourcefv(Source, AL_POSITION, SourcePos);
+    alSourcefv(Source, AL_VELOCITY, SourceVel);
+    alSourcei(Source, AL_LOOPING, 1);
+
+    return true;
+}
+ 
+void testOpenAl()
+{
+    //初始化OpenAL
+    ALCdevice* pDevice = alcOpenDevice(NULL);
+    ALCcontext* pContext = alcCreateContext(pDevice, NULL);
+    alcMakeContextCurrent(pContext);
+
+    LoadData(); // 载入WAV数据
+    
+    // 播放
+    alSourcePlay(Source);
+    printf("Press Enter To Stop Sound\n");
+    getchar();
+    alSourceStop(Source);
+
+    // 卸载WAV数据
+    alDeleteBuffers(1, &Buffer);
+    alDeleteSources(1, &Source);
+
+
+    // 关闭openal
+    alcMakeContextCurrent(NULL);
+    alcDestroyContext(pContext);
+    alcCloseDevice(pDevice);
+}
+
+void playPcmAudioByWindowSystemAPI()
 {
     const int buf_size = 1024 * 1024 * 30;
     char* buf = new char[buf_size];
@@ -15,8 +83,8 @@ int main(int argc, char** argv)
     sprintf(pcmFilePath, "%s%s", exePath, "taqing.pcm");
 
     FILE* thbgm; //文件
-    fopen_s(&thbgm, pcmFilePath, "rb");
     fread(buf, sizeof(char), buf_size, thbgm); //预读取文件
+    fopen_s(&thbgm, pcmFilePath, "rb");
     fclose(thbgm);
 
     WAVEFORMATEX wfx = { 0 };
@@ -53,6 +121,14 @@ int main(int argc, char** argv)
     }
     waveOutClose(hwo);
     CloseHandle(wait);
+}
+int main(int argc, char** argv)
+{
+
+    testOpenAl();
+    char mp3File[255];
+    FILE* soundFile = fopen(mp3File, "rb");
+    //alutCreateBufferFromFile(mp3File);
 
 
     return 0;
