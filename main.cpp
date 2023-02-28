@@ -5,11 +5,11 @@
 #include "AL/alc.h"
 #include "AL/alut.h"
 #include <math.h>
-
+#include <iostream>
+using namespace std;
 ALuint Source;// 用于播放声音
 ALuint Buffer;// 声音数据
-
-
+char ExePath[255];
  
 
 //载入数据
@@ -40,7 +40,7 @@ bool LoadData()
     alSourcefv(Source, AL_POSITION, SourcePos);
     alSourcefv(Source, AL_VELOCITY, SourceVel);
     alSourcei(Source, AL_LOOPING, 1);
-
+ 
     return true;
 }
  
@@ -75,12 +75,10 @@ void playPcmAudioByWindowSystemAPI()
     const int buf_size = 1024 * 1024 * 30;
     char* buf = new char[buf_size];
 
-    char exePath[255];
-    GetModuleFileName(NULL, exePath, 255);
-    strrchr(exePath, '\\')[1] = 0; // 0是字符串的结尾
+
 
     char pcmFilePath[255];
-    sprintf(pcmFilePath, "%s%s", exePath, "taqing.pcm");
+    sprintf(pcmFilePath, "%s%s", ExePath, "taqing.pcm");
 
     FILE* thbgm; //文件
     fread(buf, sizeof(char), buf_size, thbgm); //预读取文件
@@ -122,14 +120,36 @@ void playPcmAudioByWindowSystemAPI()
     waveOutClose(hwo);
     CloseHandle(wait);
 }
+void testAlutPlayWav(){
+    alutInit(nullptr, nullptr);
+    char mp3File[255];
+    sprintf(mp3File, "%s%s", ExePath, "1.wav");// 只支持了wav
+    FILE* soundFile = fopen(mp3File, "rb");
+    ALuint buffer = alutCreateBufferFromFile(mp3File);
+    if (buffer== AL_NONE)
+    {
+        cout << alutGetErrorString(alutGetError());
+        return;
+    }
+    ALuint source;
+    alGenSources(1, &source);
+    alSourcei(source, AL_BUFFER, buffer);
+    alSourcePlay(source);
+    ALint state;
+    do 
+    {
+        alutSleep(0.3f);
+        alGetSourcei(source, AL_SOURCE_STATE, &state);
+    } while (state == AL_PLAYING);
+}
 int main(int argc, char** argv)
 {
+    GetModuleFileName(NULL, ExePath, 255);
+    strrchr(ExePath, '\\')[1] = 0; // 0是字符串的结尾
 
-    testOpenAl();
-    char mp3File[255];
-    FILE* soundFile = fopen(mp3File, "rb");
-    alutCreateBufferFromFile(mp3File);
 
+    //testOpenAl();
+    testAlutPlayWav();
 
     return 0;
 }
