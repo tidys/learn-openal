@@ -142,14 +142,16 @@ void testAlutPlayWav(){
         alGetSourcei(source, AL_SOURCE_STATE, &state);
     } while (state == AL_PLAYING);
 }
+#include "test.h"
 int main(int argc, char** argv)
 {
     GetModuleFileName(NULL, ExePath, 255);
     strrchr(ExePath, '\\')[1] = 0; // 0是字符串的结尾
 
 
+    testMain("E:/proj/tank5/client/frameworks/qt-editor/res/test-project.mp4");
     //testOpenAl();
-    testAlutPlayWav();
+    //testAlutPlayWav();
 
     return 0;
 }

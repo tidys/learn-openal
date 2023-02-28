@@ -13,10 +13,33 @@ include_directories(${CMAKE_CURRENT_LIST_DIR}/openalut)
 file(GLOB_RECURSE srcAlut
     ${CMAKE_CURRENT_LIST_DIR}/thirdparty/AL/*.h
 )
-source_group(TREE ${CMAKE_CURRENT_LIST_DIR} FILES ${srcAlut})
 
-add_executable(${APP} ./main.cpp ${srcAlut})
+# ffmpeg
+set(FFMPEG_DEV_ROOT ${CMAKE_CURRENT_LIST_DIR}/thirdparty/ffmpeg)
+include_directories(${FFMPEG_DEV_ROOT}/include)
+link_directories(${FFMPEG_DEV_ROOT}/bin)
+link_libraries(
+    avcodec
+    avformat
+    avfilter
+    swresample
+    swscale
+    avutil
+)
+file(GLOB_RECURSE FFMPEG_HEADS ${FFMPEG_DEV_ROOT}/include/*.h)
+set(ProjectSrc
+    ./main.cpp
+    ./test.cpp
+    ./test.h
+    ${srcAlut} ${FFMPEG_HEADS})
+source_group(TREE ${CMAKE_CURRENT_LIST_DIR} FILES ${ProjectSrc})
+
+add_executable(${APP} ${ProjectSrc})
+
+# copy ffmpeg dlls
+file(GLOB ffmpeg_shared_libries ${FFMPEG_DEV_ROOT}/bin/*dll)
 add_custom_command(TARGET ${APP} PRE_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy ${ffmpeg_shared_libries} $(outdir)
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_LIST_DIR}/res $(outdir)
     COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_LIST_DIR}/thirdparty/lib/alut.dll $(outdir)
 )
