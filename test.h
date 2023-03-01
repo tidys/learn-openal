@@ -1,1 +1,0 @@
-int testMain(char* file);

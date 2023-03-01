@@ -30,21 +30,13 @@ extern "C"
 #include <libavutil/opt.h>
 #include <libswresample/swresample.h>
 };
-#ifdef _WIN32
-#include <AL/al.h>
-#include <AL/alc.h>
-#else
-#include <OpenAL/al.h>
-#include <OpenAL/alc.h>
-#endif
-
 #include <iostream>
 #include <signal.h>
 #include <sys/stat.h>
 #include <time.h>
-
+#include "test.h"
 using namespace std;
-
+#include "util.h"
 
 #define AVCODEC_MAX_AUDIO_FRAME_SIZE 192000 // 1 second of 48khz 32bit audio
 #define NUM_BUFFERS 3
@@ -57,45 +49,26 @@ typedef struct PacketQueue {
     int numOfPackets;
 } PacketQueue;
 
-
-
-void initPacketQueue(PacketQueue* q)
-{
-    memset(q, 0, sizeof(PacketQueue));
-}
-
-
 int pushPacketToPacketQueue(PacketQueue* pPktQ, AVPacket* pPkt)
 {
-
     AVPacketList* pPktList;
-
     if (av_dup_packet(pPkt) < 0) {
         return -1;
     }
-
     pPktList = (AVPacketList*)av_malloc(sizeof(AVPacketList));
     if (!pPktList) {
         return -1;
     }
-
     pPktList->pkt = *pPkt;
     pPktList->next = NULL;
-
-
-    //
     if (!pPktQ->pLastPkt) {
         pPktQ->pFirstPkt = pPktList;
     }
     else {
         pPktQ->pLastPkt->next = pPktList;
     }
-
     pPktQ->pLastPkt = pPktList;
-
-    //
     pPktQ->numOfPackets++;
-
     return 0;
 }
 
@@ -104,43 +77,31 @@ static int popPacketFromPacketQueue(PacketQueue* pPQ, AVPacket* pPkt)
 {
     AVPacketList* pPktList;
     int ret;
-
-    //
     pPktList = pPQ->pFirstPkt;
-
     if (pPktList) {
         pPQ->pFirstPkt = pPktList->next;
         if (!pPQ->pFirstPkt) {
             pPQ->pLastPkt = NULL;
         }
         pPQ->numOfPackets--;
-
         *pPkt = pPktList->pkt;
-
         av_free(pPktList);
-
         return 0;
     }
-
     return -1;
 }
-
 
 int decode(uint8_t* buf, int bufSize, AVPacket* packet, AVCodecContext* codecContext,
     SwrContext* swr, int dstRate, int dstNbChannels, enum AVSampleFormat* dstSampleFmt)
 {
-
     unsigned int bufIndex = 0;
     unsigned int dataSize = 0;
-
     AVFrame* frame = av_frame_alloc();
     if (!frame) {
         cout << "Error allocating the frame" << endl;
         av_free_packet(packet);
         return 0;
     }
-
-
     while (packet->size > 0)
     {
         int gotFrame = 0;
@@ -184,37 +145,23 @@ int decode(uint8_t* buf, int bufSize, AVPacket* packet, AVCodecContext* codecCon
                 break;
             }
 
-            // 変換したデータをバッファに書き込む
+            // 复制到缓冲区
             memcpy((uint8_t*)buf + bufIndex, dstData[0], dstBufSize);
             bufIndex += dstBufSize;
             dataSize += dstBufSize;
-
             if (dstData)
                 av_freep(&dstData[0]);
             av_freep(&dstData);
-
         }
         else {
-
             packet->size = 0;
             packet->data = NULL;
-
         }
     }
-
     av_free_packet(packet);
     av_free(frame);
-
     return dataSize;
 }
-
-
-static void sigHandler(int sig)
-{
-    // 再生終了
-    playing = 0;
-}
-
 
 int testMain(char* file)
 {
@@ -265,10 +212,7 @@ int testMain(char* file)
     int64_t dstChLayout = AV_CH_LAYOUT_STEREO;
     int dstNbChannels = av_get_channel_layout_nb_channels(dstChLayout);
     enum AVSampleFormat dstSampleFmt = AV_SAMPLE_FMT_S16;
-
-
     // buffer is going to be directly written to a rawaudio file, no alignment
-
     struct SwrContext* swr = swr_alloc();
     if (!swr) {
         fprintf(stderr, "Could not allocate resampler context\n");
@@ -295,7 +239,7 @@ int testMain(char* file)
 
     //-----------------------------------------------------------------//
     ALCdevice* dev = alcOpenDevice(NULL);
-
+    CHECHERROR();
     if (!dev) {
         fprintf(stderr, "Oops\n");
         swr_free(&swr);
@@ -305,7 +249,9 @@ int testMain(char* file)
     }
 
     ALCcontext* ctx = alcCreateContext(dev, NULL);
+    CHECHERROR();
     alcMakeContextCurrent(ctx);
+    CHECHERROR();
     if (!ctx) {
         fprintf(stderr, "Oops2\n");
         swr_free(&swr);
@@ -317,7 +263,9 @@ int testMain(char* file)
     ALuint source, buffers[NUM_BUFFERS];
 
     alGenBuffers(NUM_BUFFERS, buffers);
+    CHECHERROR();
     alGenSources(1, &source);
+    CHECHERROR();
     if (alGetError() != AL_NO_ERROR) {
         fprintf(stderr, "Error generating :(\n");
         swr_free(&swr);
@@ -326,16 +274,14 @@ int testMain(char* file)
         return 1;
     }
 
-
-    // PacketQueueを使い
-    // 一旦音楽データをパケットに分解して保持する。
+    // 将所有的音频数据都解析出来了
     PacketQueue pktQueue;
-    initPacketQueue(&pktQueue);
+    memset(&pktQueue, 0, sizeof(PacketQueue));
 
     AVPacket readingPacket;
     av_init_packet(&readingPacket);
-
-    while (av_read_frame(formatContext, &readingPacket) >= 0) {
+    int ret = 0;
+    while ((ret = av_read_frame(formatContext, &readingPacket)) >= 0) {
 
         // Is this a packet from the video stream?
         if (readingPacket.stream_index == audioStream->index) {
@@ -346,6 +292,10 @@ int testMain(char* file)
         else {
             av_free_packet(&readingPacket);
         }
+    }
+    if (ret == AVERROR_EOF)
+    {
+        cout << "end of file";
     }
 
 
@@ -374,8 +324,7 @@ int testMain(char* file)
         av_free_packet(&decodingPacket);
     }
 
-
-    // データが入ったバッファをキューに追加して、再生を開始する。
+    // 添加到缓冲队列再进行播放
     alSourceQueueBuffers(source, NUM_BUFFERS, buffers);
     alSourcePlay(source);
 
@@ -389,15 +338,11 @@ int testMain(char* file)
     }
 
 
-    // パケットキューがなくなるまで、繰り返す。
     while (pktQueue.numOfPackets && playing) {
 
-        // 使用済みバッファの数を取得する。
-        // 使用済みバッファがない場合は、できるまで繰り返す。
-        ALint val;
-        alGetSourcei(source, AL_BUFFERS_PROCESSED, &val);
-        if (val <= 0) {
-            // 少しスリープさせて処理を減らす。
+        ALint process;
+        alGetSourcei(source, AL_BUFFERS_PROCESSED, &process);
+        if (process <= 0) {
             struct timespec ts = { 0, 1 * 1000000 }; // 1msec
             //nanosleep(&ts, NULL);
             continue;
@@ -416,11 +361,11 @@ int testMain(char* file)
             continue;
         }
 
-        // 再生済みのバッファをデキューする。
+        // 将已播放的缓冲区出队
         ALuint buffer;
         alSourceUnqueueBuffers(source, 1, &buffer);
 
-        // デキューしたバッファに、新しい音楽データを書き込む。
+        // 新的写入缓冲区
         alBufferData(buffer, AL_FORMAT_STEREO16, audioBuf, audioBufSize, dstRate);
         if (alGetError() != AL_NO_ERROR)
         {
@@ -428,7 +373,6 @@ int testMain(char* file)
             return 1;
         }
 
-        // 新しいデータを書き込んだバッファをキューする。
         alSourceQueueBuffers(source, 1, &buffer);
         if (alGetError() != AL_NO_ERROR)
         {
@@ -436,17 +380,13 @@ int testMain(char* file)
             return 1;
         }
 
-        // もし再生が止まっていたら、再生する。
-        alGetSourcei(source, AL_SOURCE_STATE, &val);
-        if (val != AL_PLAYING)
+        alGetSourcei(source, AL_SOURCE_STATE, &process);
+        if (process != AL_PLAYING)
             alSourcePlay(source);
 
-        // 掃除
         av_free_packet(&decodingPacket);
     }
 
-
-    // 未処理のパケットが残っている場合は、パケットを解放する。
     while (pktQueue.numOfPackets) {
         AVPacket decodingPacket;
         if (popPacketFromPacketQueue(&pktQueue, &decodingPacket) < 0)
@@ -454,9 +394,7 @@ int testMain(char* file)
         av_free_packet(&decodingPacket);
     }
 
-
     cout << "End." << endl;
-
 
     swr_free(&swr);
 

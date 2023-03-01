@@ -27,11 +27,8 @@ link_libraries(
     avutil
 )
 file(GLOB_RECURSE FFMPEG_HEADS ${FFMPEG_DEV_ROOT}/include/*.h)
-set(ProjectSrc
-    ./main.cpp
-    ./test.cpp
-    ./test.h
-    ${srcAlut} ${FFMPEG_HEADS})
+file(GLOB_RECURSE SRC ${CMAKE_CURRENT_LIST_DIR}/src/*.h ${CMAKE_CURRENT_LIST_DIR}/src/*.cpp ${CMAKE_CURRENT_LIST_DIR}/src/*.c)
+set(ProjectSrc ${SRC} ${srcAlut} ${FFMPEG_HEADS})
 source_group(TREE ${CMAKE_CURRENT_LIST_DIR} FILES ${ProjectSrc})
 
 add_executable(${APP} ${ProjectSrc})

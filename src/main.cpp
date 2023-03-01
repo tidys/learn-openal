@@ -6,68 +6,78 @@
 #include "AL/alut.h"
 #include <math.h>
 #include <iostream>
+
+#include "test.h"
+#include "alengine.h"
 using namespace std;
-ALuint Source;// 用于播放声音
-ALuint Buffer;// 声音数据
+#include <string>
+
 char ExePath[255];
  
-
-//载入数据
-bool LoadData()
-{
-    // 使用一段正弦波作数据
-    short data[800];
-    alGenBuffers(1, &Buffer);
-    float max = SHRT_MAX / 4;
-    float rad = 0;
-    for (short& e : data)
-    {
-        e = (short)(max * cosf(rad));
-        rad += 1.f;
-    }
-    // 载入WAV数据
-    alBufferData(Buffer, AL_FORMAT_MONO16, data, 800, 8000);
-    alGenSources(1, &Source);
-
-    // 源声音的位置
-    ALfloat SourcePos[] = { 0.0, 0.0, 0.0 };
-    // 源声音的速度
-    ALfloat SourceVel[] = { 0.0, 0.0, 0.0 };
-
-    alSourcei(Source, AL_BUFFER, Buffer);
-    alSourcef(Source, AL_PITCH, 1.0f);
-    alSourcef(Source, AL_GAIN, 1.0f);
-    alSourcefv(Source, AL_POSITION, SourcePos);
-    alSourcefv(Source, AL_VELOCITY, SourceVel);
-    alSourcei(Source, AL_LOOPING, 1);
  
-    return true;
-}
  
 void testOpenAl()
 {
-    //初始化OpenAL
-    ALCdevice* pDevice = alcOpenDevice(NULL);
-    ALCcontext* pContext = alcCreateContext(pDevice, NULL);
-    alcMakeContextCurrent(pContext);
+    ALEngine engine;
+    //engine.setLoop(true);
+    for (int i = 1; i <= 5; i++)
+    {
+        int size = i * 1000;
+        unsigned char* data = engine.getTestData(size);
+        engine.pushPcmData(data, size, size);
+        delete data;
+    }
+    engine.play();
 
-    LoadData(); // 载入WAV数据
-    
-    // 播放
-    alSourcePlay(Source);
-    printf("Press Enter To Stop Sound\n");
-    getchar();
-    alSourceStop(Source);
+    string cmd;
+    while (cin >> cmd)
+    {
+        if (cmd == "q")
+        {
+            return;
+        }
+        else if (cmd == "x")
+        {
+            engine.changePosX(true);
+        }
+        else if (cmd == "xx")
+        {
+            engine.changePosX(false);
+        }else if (cmd =="y")
+        {
+            engine.changePosY(true);
+        }else if (cmd =="yy")
+        {
+            engine.changePosY(false);
+        }else if (cmd =="z")
+        {
+            engine.changePosZ(true);
+        }else if (cmd =="zz")
+        {
+            engine.changePosZ(false);
+        }else if (cmd =="loop")
+        {
+            engine.setLoop(!engine.getLoop());
+        }else if (cmd =="putbuf")
+        {
+            for (int i = 1; i <= 40; i++)
+            {
+                int size = i * 1000;
+                unsigned char* data = engine.getTestData(size);
+                engine.pushPcmData(data, size, size/2);
+                delete data;
+            }
+        }else if (cmd =="stop")
+        {
+            engine.stop();
+        }
+        else if (cmd =="play")
+        {
+            engine.play();
+        }
+    }
 
-    // 卸载WAV数据
-    alDeleteBuffers(1, &Buffer);
-    alDeleteSources(1, &Source);
-
-
-    // 关闭openal
-    alcMakeContextCurrent(NULL);
-    alcDestroyContext(pContext);
-    alcCloseDevice(pDevice);
+   
 }
 
 void playPcmAudioByWindowSystemAPI()
@@ -142,15 +152,14 @@ void testAlutPlayWav(){
         alGetSourcei(source, AL_SOURCE_STATE, &state);
     } while (state == AL_PLAYING);
 }
-#include "test.h"
 int main(int argc, char** argv)
 {
     GetModuleFileName(NULL, ExePath, 255);
     strrchr(ExePath, '\\')[1] = 0; // 0是字符串的结尾
 
 
-    testMain("E:/proj/tank5/client/frameworks/qt-editor/res/test-project.mp4");
-    //testOpenAl();
+    testOpenAl();
+    //testMain("E:/proj/tank5/client/frameworks/qt-editor/res/test-project.mp4");
     //testAlutPlayWav();
 
     return 0;
