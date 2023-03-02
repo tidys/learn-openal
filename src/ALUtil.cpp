@@ -1,4 +1,4 @@
-#include "util.h"
+#include "ALUtil.h"
 #include <stdio.h>
 char* getErrorString(ALenum err)
 {

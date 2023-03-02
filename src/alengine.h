@@ -1,15 +1,18 @@
 #ifndef __ALEngine__H__
 #define __ALEngine__H__
+#include "ALUtil.h"
 #include <iostream>
 #include <thread>
 #include <vector>
-#include "util.h"
 #include <mutex>
+#include <chrono>
 using namespace std;
+
+
+#define ALENGINE_BUFFER_COUNT 3
 struct PcmdFrame{
     unsigned char* data = nullptr;
     int size = 0;
-    int hz = 1000;
 };
 class ALEngine{
 public:
@@ -19,24 +22,31 @@ public:
 
     void play();
     void stop();
-    unsigned char* getTestData(int size=2000);
+    unsigned char* getTestWaveData(int size);
+    void setChannels(int n);
     void changePosX(bool inc);
     void changePosY(bool inc);
     void changePosZ(bool inc);
     void setLoop(bool loop);
-    bool getLoop(){ return this->_loop; }
+    void setFrequency(int freq);
+    bool getLoop();
     bool isPlaying();
-    int getQueuedBuffersCount();
+    void pushPcmData(unsigned char* data, int size);
+private:
+    void getBufferInfo(ALuint buuferID);
+    void eraseFront();
     void cleanQueuedBuffers();
     void cleanProcessedBuffers();
-    void pushPcmData(unsigned char* data, int size, int hz);
-private:
+    int getQueuedBuffersCount();
+    int getProcessedBuffersCount();
     void updateSourceProperty();
     void _stop();
     void _play();
 private:
-    ALuint _source;// 用于播放声音
-    ALuint _buffer;// 声音数据
+    ALenum _format = AL_FORMAT_STEREO16;
+    int _channels = 2;
+    int _freq = 1000;
+    ALuint _source;
     ALCdevice* pDevice=nullptr;
     ALCcontext* pContext = nullptr;
     float _posX = 0;

@@ -36,7 +36,7 @@ extern "C"
 #include <time.h>
 #include "test.h"
 using namespace std;
-#include "util.h"
+#include "ALUtil.h"
 
 #define AVCODEC_MAX_AUDIO_FRAME_SIZE 192000 // 1 second of 48khz 32bit audio
 #define NUM_BUFFERS 3

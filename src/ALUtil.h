@@ -1,11 +1,11 @@
-#ifdef _WIN32
-#include <AL/al.h>
-#include <AL/alc.h>
+#ifdef OPENAL_PLAIN_INCLUDES
+#include "al.h"
+#include "alc.h"
 #else
-#include <OpenAL/al.h>
-#include <OpenAL/alc.h>
+#include "AL/al.h"
+#include "AL/alc.h"
 #endif
-
+typedef unsigned char unit8_t;
 
 char* getErrorString(ALenum err);
 void checkError(char* file, int line);

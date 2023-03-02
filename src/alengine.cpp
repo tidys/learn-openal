@@ -1,23 +1,19 @@
-#include "alengine.h"
-#include <chrono>
-typedef unsigned char unit8_t;
+#include "ALEngine.h"
 
 ALEngine::ALEngine()
 {
    stopThread = false;
     pDevice = alcOpenDevice(NULL);
-    CHECHERROR();
     pContext = alcCreateContext(pDevice, NULL);
-    CHECHERROR();
     alcMakeContextCurrent(pContext);
-    CHECHERROR();
     alGenSources(1, &_source);
     this->updateSourceProperty();
 }
 
 ALEngine::~ALEngine()
 {
-    alDeleteBuffers(1, &_buffer);
+    this->cleanProcessedBuffers();
+    this->cleanQueuedBuffers();
     alDeleteSources(1, &_source);
 
     alcMakeContextCurrent(NULL);
@@ -32,6 +28,24 @@ ALEngine::~ALEngine()
     }
 }
 
+void ALEngine::getBufferInfo(ALuint buuferID)
+{
+    ALint size;
+    alGetBufferi(buuferID, AL_SIZE, &size);
+    ALint channels;
+    alGetBufferi(buuferID, AL_CHANNELS, &channels);
+    ALint freq;
+    alGetBufferi(buuferID, AL_FREQUENCY, &freq);
+}
+
+void ALEngine::eraseFront()
+{
+    PcmdFrame frame = this->_pcmFrames.front();
+    delete frame.data;
+    frame.data = nullptr;
+    this->_pcmFrames.erase(this->_pcmFrames.begin());
+}
+
 void ALEngine::threadFunction()
 {
     while (!stopThread)
@@ -43,7 +57,7 @@ void ALEngine::threadFunction()
             this->_stop();
             continue;
         }
-        if (this->getQueuedBuffersCount() <= 0 && this->_pcmFrames.size()>0)
+        if (this->getQueuedBuffersCount() < ALENGINE_BUFFER_COUNT && this->_pcmFrames.size() > 0)
         {
             unique_lock<mutex> lock(this->_mutex);
             PcmdFrame frame = this->_pcmFrames.front();
@@ -51,18 +65,12 @@ void ALEngine::threadFunction()
             ALuint buffer;
             alGenBuffers(1, &buffer);
             CHECHERROR();
-            alBufferData(buffer, AL_FORMAT_MONO16, frame.data, frame.size, frame.hz);
-            CHECHERROR();
-            float playTime = frame.size / frame.hz;
-            printf("%d\n", time(NULL));
-            printf("play need time %.2fs\n", playTime);
+            alBufferData(buffer, this->_format, frame.data, frame.size, this->_freq);
             CHECHERROR();
             alSourceQueueBuffers(this->_source, 1, &buffer);
             CHECHERROR();
 
-            delete frame.data;
-            frame.data = nullptr;
-            this->_pcmFrames.erase(this->_pcmFrames.begin());
+            this->eraseFront();
             this->_play();
         }
         else{
@@ -71,6 +79,7 @@ void ALEngine::threadFunction()
     }
     printf("check thread over");
 }
+
 
 void ALEngine::updateSourceProperty()
 {
@@ -103,7 +112,11 @@ void ALEngine::_play()
     alGetSourcei(this->_source, AL_SOURCE_STATE, &state);
     if (state != AL_PLAYING)
     {
-        alSourcePlay(_source);
+        int queueNum=this->getQueuedBuffersCount();
+        if (queueNum > 0)
+        {
+            alSourcePlay(_source);
+        }
     }
 }
 
@@ -111,7 +124,7 @@ void ALEngine::_play()
 void ALEngine::play()
 {
     this->_isPlaying = true;
-    if (this->_thread==nullptr)
+    if (this->_thread == nullptr)
     {
         this->_thread = new thread(&ALEngine::threadFunction, this);
     }
@@ -123,10 +136,9 @@ void ALEngine::stop()
     this->_isPlaying =false;
 }
 
-// 生成的2000个PCM数据，播放的时候采用频率也是1000，所以可以播放2s的时间
-unsigned char* ALEngine::getTestData(int size)
+unsigned char* ALEngine::getTestWaveData(int size)
 {
-    unit8_t* data = new uint8_t[size];
+    unsigned char* data = new unsigned char[size];
     float max = CHAR_MAX / 4;
     float rad = 0;
 
@@ -136,6 +148,12 @@ unsigned char* ALEngine::getTestData(int size)
         rad += 1.f;
     }
     return data;
+}
+
+void ALEngine::setChannels(int n)
+{
+    this->_channels = n;
+    this->_format = n > 1 ? AL_FORMAT_STEREO16 : AL_FORMAT_MONO16;
 }
 
 void ALEngine::changePosX(bool inc)
@@ -162,6 +180,16 @@ void ALEngine::setLoop(bool loop)
     alSourcei(_source, AL_LOOPING, loop ? AL_TRUE : AL_FALSE);
 }
 
+void ALEngine::setFrequency(int freq)
+{
+    this->_freq = freq;
+}
+
+bool ALEngine::getLoop()
+{
+    return this->_loop;
+}
+
 bool ALEngine::isPlaying()
 {
     ALint state;
@@ -173,7 +201,13 @@ int ALEngine::getQueuedBuffersCount()
 {
     ALint process = 0;
     alGetSourcei(_source, AL_BUFFERS_QUEUED, &process);
-    CHECHERROR();
+    return process;
+}
+
+int ALEngine::getProcessedBuffersCount()
+{
+    ALint process = 0;
+    alGetSourcei(_source, AL_BUFFERS_PROCESSED, &process);
     return process;
 }
 
@@ -184,17 +218,13 @@ void ALEngine::cleanQueuedBuffers()
     {
         ALuint bufferID;
         alSourceUnqueueBuffers(_source, 1, &bufferID);
-        CHECHERROR();
         alDeleteBuffers(1, &bufferID);
-        CHECHERROR();
     }
 }
 // 清理队列中已经完成的buffer
 void ALEngine::cleanProcessedBuffers()
 {
-    ALint process = 0;
-    alGetSourcei(_source, AL_BUFFERS_PROCESSED, &process);
-    CHECHERROR();
+    ALint process = this->getProcessedBuffersCount();
     while ((process--) > 0)
     {
         ALuint bufferID;
@@ -204,12 +234,11 @@ void ALEngine::cleanProcessedBuffers()
     }
 }
 
-void ALEngine::pushPcmData(unsigned char* data, int size, int hz)
+void ALEngine::pushPcmData(unsigned char* data, int size)
 {
     unique_lock<mutex> lock(this->_mutex);
     PcmdFrame frame;
     frame.size = size;
-    frame.hz = hz;
     frame.data = new unsigned char[size];
     memcpy(frame.data, data, size);
     this->_pcmFrames.push_back(frame);

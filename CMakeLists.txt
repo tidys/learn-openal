@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.0.0)
 set(APP "pck-player")
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_LIST_DIR}/dist)
 project(${APP} VERSION 0.1.0)
+add_compile_definitions(OPENAL_PLAIN_INCLUDES)
 include_directories(${CMAKE_CURRENT_LIST_DIR}/thirdparty)
 include_directories(${CMAKE_CURRENT_LIST_DIR}/thirdparty/AL)
 

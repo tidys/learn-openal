@@ -23,8 +23,8 @@ void testOpenAl()
     for (int i = 1; i <= 5; i++)
     {
         int size = i * 1000;
-        unsigned char* data = engine.getTestData(size);
-        engine.pushPcmData(data, size, size);
+        unsigned char* data = engine.getTestWaveData(size);
+        engine.pushPcmData(data, size);
         delete data;
     }
     engine.play();
@@ -60,13 +60,14 @@ void testOpenAl()
             engine.setLoop(!engine.getLoop());
         }else if (cmd =="putbuf")
         {
-            for (int i = 1; i <= 40; i++)
+            for (int i = 1; i <= 2; i++)
             {
                 int size = i * 1000;
-                unsigned char* data = engine.getTestData(size);
-                engine.pushPcmData(data, size, size/2);
+                unsigned char* data = engine.getTestWaveData(size);
+                engine.pushPcmData(data, size);
                 delete data;
             }
+            engine.play();
         }else if (cmd =="stop")
         {
             engine.stop();
@@ -158,8 +159,8 @@ int main(int argc, char** argv)
     strrchr(ExePath, '\\')[1] = 0; // 0是字符串的结尾
 
 
-    testOpenAl();
-    //testMain("E:/proj/tank5/client/frameworks/qt-editor/res/test-project.mp4");
+    //testOpenAl();
+    testMain("E:/proj/tank5/client/frameworks/qt-editor/res/gaga.mp4");
     //testAlutPlayWav();
 
     return 0;
